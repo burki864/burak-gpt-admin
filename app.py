@@ -3,112 +3,82 @@ import json
 import os
 from datetime import datetime
 
-# ================== AYARLAR ==================
+# ---------------- CONFIG ----------------
+st.set_page_config(
+    page_title="Burak GPT Admin",
+    page_icon="📊",
+    layout="wide"
+)
+
+# ---------------- LOGIN ----------------
 ADMIN_EMAIL = "burakerenkisapro1122@gmail.com"
 ADMIN_PASSWORD = "burki4509"
 
-DATA_FILE = "admin_stats.json"
-
-# ================== VERİ YÜKLE ==================
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {
-            "total_visits": 0,
-            "total_clicks": 0,
-            "last_visit": None
-        }
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-# ================== SESSION INIT ==================
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
-# ================== LOGIN EKRANI ==================
 if not st.session_state.auth:
-    st.set_page_config(page_title="Admin Giriş", layout="centered")
+    st.title("🔐 Admin Girişi")
 
-    st.markdown("## 🔐 Yapımcı Girişi")
-    st.markdown("Bu sayfa sadece yetkili kullanıcı içindir.")
-
-    email = st.text_input("📧 Email")
-    password = st.text_input("🔑 Şifre", type="password")
+    email = st.text_input("Email")
+    password = st.text_input("Şifre", type="password")
 
     if st.button("Giriş Yap"):
         if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
             st.session_state.auth = True
             st.rerun()
         else:
-            st.error("❌ Email veya şifre hatalı")
+            st.error("❌ Yetkisiz giriş")
 
     st.stop()
 
-# ================== PANEL ==================
-st.set_page_config(page_title="Burak GPT • Admin Panel", layout="wide")
+# ---------------- DATA FILE ----------------
+DATA_FILE = "admin_stats.json"
 
-data = load_data()
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w") as f:
+        json.dump({
+            "total_visits": 0,
+            "image_requests": 0,
+            "chat_requests": 0,
+            "last_visit": None
+        }, f)
 
-# ziyaret sayısını admin girişiyle artırmak istemiyorsan burayı yorum satırı yapabilirsin
-data["total_visits"] += 1
-data["last_visit"] = datetime.now().strftime("%d.%m.%Y %H:%M")
-save_data(data)
+def load_data():
+    with open(DATA_FILE, "r") as f:
+        return json.load(f)
 
-# ================== UI ==================
-st.title("📊 Burak GPT • Yapımcı Paneli")
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+stats = load_data()
+
+# ---------------- PANEL ----------------
+st.title("📊 Burak GPT Admin Panel")
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.metric(
-        label="👥 Toplam Ziyaret",
-        value=data["total_visits"]
-    )
-
-with col2:
-    st.metric(
-        label="🖱️ Toplam Tıklanma",
-        value=data["total_clicks"]
-    )
-
-with col3:
-    st.metric(
-        label="🕒 Son Giriş",
-        value=data["last_visit"]
-    )
+col1.metric("👥 Toplam Ziyaret", stats["total_visits"])
+col2.metric("🎨 Görsel İstek", stats["image_requests"])
+col3.metric("💬 Sohbet İstek", stats["chat_requests"])
 
 st.divider()
 
-# ================== AKSİYONLAR ==================
-st.subheader("⚙️ Yönetim Araçları")
+st.subheader("🕒 Son Ziyaret")
+st.write(stats["last_visit"] or "Henüz yok")
 
-c1, c2 = st.columns(2)
-
-with c1:
-    if st.button("➕ Tıklanma Ekle"):
-        data["total_clicks"] += 1
-        save_data(data)
-        st.success("Tıklanma artırıldı")
-        st.rerun()
-
-with c2:
-    if st.button("🧹 İstatistikleri Sıfırla"):
-        data = {
-            "total_visits": 0,
-            "total_clicks": 0,
-            "last_visit": None
-        }
-        save_data(data)
-        st.warning("Tüm istatistikler sıfırlandı")
-        st.rerun()
+if st.button("🔄 Yenile"):
+    st.rerun()
 
 st.divider()
 
-# ================== HAM VERİ ==================
-with st.expander("📦 Ham Veri (JSON)"):
-    st.json(data)
-
-st.caption("🛠️ Bu panel sadece yapımcıya özeldir.")
+if st.button("🧹 Sayaçları Sıfırla"):
+    stats = {
+        "total_visits": 0,
+        "image_requests": 0,
+        "chat_requests": 0,
+        "last_visit": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    save_data(stats)
+    st.success("✅ Sıfırlandı")
