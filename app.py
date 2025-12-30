@@ -1,6 +1,13 @@
 import streamlit as st
-from utils import load_users, save_users
-from permissions import is_admin
+import json
+import os
+from datetime import datetime
+
+# -------- PERMISSIONS (INLINE) --------
+ADMINS = ["burak", "burakerenkisa", "burakerenkisapro1122@gmail.com"]
+
+def is_admin(username):
+    return username.lower() in [a.lower() for a in ADMINS]
 
 st.set_page_config(page_title="Admin Panel", layout="wide")
 st.title("🛠️ Yönetim Paneli")
