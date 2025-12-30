@@ -1,93 +1,68 @@
 import streamlit as st
-import json
-import os
-from datetime import datetime
+from utils import load_users, save_users
+from permissions import is_admin
 
-# ---------------- CONFIG ----------------
 st.set_page_config(
     page_title="Burak GPT | Admin Panel",
-    page_icon="🛡️",
+    page_icon="🛠️",
     layout="wide"
 )
 
-ADMIN_EMAIL = "burakerenkisapro1122@gmail.com"
-ADMIN_PASSWORD = "burki4509"
+# --- LOGIN ---
+if "admin" not in st.session_state:
+    st.session_state.admin = None
 
-USERS_FILE = "users.json"
-
-# ---------------- HELPERS ----------------
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "w") as f:
-            json.dump({}, f)
-    with open(USERS_FILE, "r") as f:
-        return json.load(f)
-
-def save_users(data):
-    with open(USERS_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-# ---------------- AUTH ----------------
-if "admin_auth" not in st.session_state:
-    st.session_state.admin_auth = False
-
-if not st.session_state.admin_auth:
+if st.session_state.admin is None:
     st.title("🔐 Admin Girişi")
+    admin_name = st.text_input("Admin kullanıcı adı")
 
-    email = st.text_input("Email")
-    password = st.text_input("Şifre", type="password")
-
-    if st.button("Giriş Yap"):
-        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-            st.session_state.admin_auth = True
+    if st.button("Giriş"):
+        if is_admin(admin_name):
+            st.session_state.admin = admin_name
             st.rerun()
         else:
-            st.error("❌ Yetkisiz giriş")
-
+            st.error("⛔ Yetkisiz erişim")
     st.stop()
 
-# ---------------- PANEL ----------------
-st.title("🛡️ Kullanıcı Yönetim Paneli")
+# --- PANEL ---
+st.sidebar.success(f"👑 Admin: {st.session_state.admin}")
+if st.sidebar.button("🚪 Çıkış Yap"):
+    st.session_state.admin = None
+    st.rerun()
 
-users = load_users()
+st.title("🛠️ Burak GPT Yönetim Paneli")
+
+data = load_users()
+users = data.get("users", {})
 
 if not users:
     st.info("Henüz kullanıcı yok")
     st.stop()
 
-st.markdown("---")
+for uid, user in users.items():
+    with st.container(border=True):
+        col1, col2, col3, col4 = st.columns([3,2,2,2])
 
-for uid, data in users.items():
-    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
+        col1.markdown(
+            f"""
+            **👤 {uid}**  
+            İsim: `{user['name']}`  
+            Oluşturulma: `{user['created_at']}`
+            """
+        )
 
-    with col1:
-        st.markdown(f"### 👤 {uid}")
-        st.caption(f"Ad: {data.get('name')}")
-        st.caption(f"Oluşturulma: {data.get('created_at')}")
+        status = "🟢 Aktif" if user["active"] else "⚪ Kapalı"
+        ban = "🚫 Banned" if user["banned"] else "✅ Temiz"
 
-    with col2:
-        status = "🟢 Aktif" if data["active"] else "⚫ Kapalı"
-        st.markdown(status)
+        col2.write(status)
+        col2.write(ban)
 
-    with col3:
-        ban = "🚫 Banned" if data["banned"] else "✅ Temiz"
-        st.markdown(ban)
-
-    with col4:
-        if st.button("👁️ Görüntüle", key=f"view_{uid}"):
-            st.info(json.dumps(data, indent=2, ensure_ascii=False))
-
-    with col5:
-        if st.button("🚫 Banla", key=f"ban_{uid}"):
-            users[uid]["banned"] = True
-            save_users(users)
-            st.warning(f"{uid} banlandı")
+        if col3.button("🚫 Ban", key=f"ban_{uid}"):
+            user["banned"] = True
+            save_users(data)
             st.rerun()
 
-        if st.button("❌ Hesabı Kapat", key=f"close_{uid}"):
-            users[uid]["active"] = False
-            save_users(users)
-            st.error(f"{uid} hesabı kapatıldı")
+        if col4.button("❌ Hesap Kapat", key=f"close_{uid}"):
+            user["active"] = False
+            save_users(data)
             st.rerun()
-
-    st.markdown("---")
