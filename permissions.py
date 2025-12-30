@@ -1,4 +1,7 @@
-ADMINS = ["burak", "admin", "burki864"]
+ADMINS = {
+    "burakerenkisapro1122@gmail.com": "123456",
+    "admin@gmail.com": "admin123"
+}
 
-def is_admin(username: str) -> bool:
-    return username.lower() in ADMINS
+def check_admin(email, password):
+    return ADMINS.get(email) == password
