@@ -26,11 +26,11 @@ if st.session_state.get("admin"):
         col1.write(f"👤 {uid} | {user['name']}")
 
         if col2.button("🚫 Ban", key=f"ban_{uid}"):
-            user["banned"] = True
-            save_users(data)
-            st.experimental_rerun()
+    user["banned"] = True
+    save_users(data)
+    st.rerun()
 
-        if col3.button("❌ Hesap Kapat", key=f"close_{uid}"):
-            user["active"] = False
-            save_users(data)
-            st.experimental_rerun()
+if col3.button("❌ Hesap Kapat", key=f"close_{uid}"):
+    user["active"] = False
+    save_users(data)
+    st.rerun()
