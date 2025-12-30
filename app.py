@@ -1,71 +1,114 @@
 import streamlit as st
+import json
 import os
+from datetime import datetime
 
-# ================== CONFIG ==================
+# ================== AYARLAR ==================
 ADMIN_EMAIL = "burakerenkisapro1122@gmail.com"
 ADMIN_PASSWORD = "burki4509"
 
-VISITOR_FILE = "visitors.txt"
-CLICK_FILE = "clicks.txt"
+DATA_FILE = "admin_stats.json"
 
-# ================== HELPERS ==================
-def read_count(file):
-    if not os.path.exists(file):
-        return 0
-    with open(file, "r") as f:
-        data = f.read().strip()
-        return int(data) if data.isdigit() else 0
+# ================== VERİ YÜKLE ==================
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return {
+            "total_visits": 0,
+            "total_clicks": 0,
+            "last_visit": None
+        }
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-# ================== PAGE ==================
-st.set_page_config(
-    page_title="Burak GPT | Admin",
-    page_icon="🔐",
-    layout="centered"
-)
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-# ================== SESSION ==================
-if "admin_logged" not in st.session_state:
-    st.session_state.admin_logged = False
+# ================== SESSION INIT ==================
+if "auth" not in st.session_state:
+    st.session_state.auth = False
 
-# ================== LOGIN SCREEN ==================
-if not st.session_state.admin_logged:
-    st.title("🔐 Yapımcı Girişi")
-    st.caption("Bu sayfa yalnızca yetkili kişiye açıktır")
+# ================== LOGIN EKRANI ==================
+if not st.session_state.auth:
+    st.set_page_config(page_title="Admin Giriş", layout="centered")
+
+    st.markdown("## 🔐 Yapımcı Girişi")
+    st.markdown("Bu sayfa sadece yetkili kullanıcı içindir.")
 
     email = st.text_input("📧 Email")
     password = st.text_input("🔑 Şifre", type="password")
 
     if st.button("Giriş Yap"):
         if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-            st.session_state.admin_logged = True
-            st.success("✅ Giriş başarılı")
+            st.session_state.auth = True
             st.rerun()
         else:
-            st.error("❌ Email veya şifre yanlış")
+            st.error("❌ Email veya şifre hatalı")
 
-    st.stop()  # 🚨 LOGIN OLMADAN AŞAĞISI ASLA ÇALIŞMAZ
+    st.stop()
 
-# ================== ADMIN PANEL ==================
-st.title("📊 Burak GPT – Yönetici Paneli")
-st.caption("Canlı kullanım ve etkileşim verileri")
+# ================== PANEL ==================
+st.set_page_config(page_title="Burak GPT • Admin Panel", layout="wide")
 
-visitors = read_count(VISITOR_FILE)
-clicks = read_count(CLICK_FILE)
+data = load_data()
 
-col1, col2 = st.columns(2)
-col1.metric("👥 Toplam Ziyaretçi", visitors)
-col2.metric("🖱️ Toplam Tıklanma", clicks)
+# ziyaret sayısını admin girişiyle artırmak istemiyorsan burayı yorum satırı yapabilirsin
+data["total_visits"] += 1
+data["last_visit"] = datetime.now().strftime("%d.%m.%Y %H:%M")
+save_data(data)
+
+# ================== UI ==================
+st.title("📊 Burak GPT • Yapımcı Paneli")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        label="👥 Toplam Ziyaret",
+        value=data["total_visits"]
+    )
+
+with col2:
+    st.metric(
+        label="🖱️ Toplam Tıklanma",
+        value=data["total_clicks"]
+    )
+
+with col3:
+    st.metric(
+        label="🕒 Son Giriş",
+        value=data["last_visit"]
+    )
 
 st.divider()
 
-st.subheader("📈 Genel Aktivite Özeti")
-st.bar_chart({
-    "Ziyaretçiler": visitors,
-    "Tıklanmalar": clicks
-})
+# ================== AKSİYONLAR ==================
+st.subheader("⚙️ Yönetim Araçları")
+
+c1, c2 = st.columns(2)
+
+with c1:
+    if st.button("➕ Tıklanma Ekle"):
+        data["total_clicks"] += 1
+        save_data(data)
+        st.success("Tıklanma artırıldı")
+        st.rerun()
+
+with c2:
+    if st.button("🧹 İstatistikleri Sıfırla"):
+        data = {
+            "total_visits": 0,
+            "total_clicks": 0,
+            "last_visit": None
+        }
+        save_data(data)
+        st.warning("Tüm istatistikler sıfırlandı")
+        st.rerun()
 
 st.divider()
 
-if st.button("🚪 Çıkış Yap"):
-    st.session_state.admin_logged = False
-    st.rerun()
+# ================== HAM VERİ ==================
+with st.expander("📦 Ham Veri (JSON)"):
+    st.json(data)
+
+st.caption("🛠️ Bu panel sadece yapımcıya özeldir.")
