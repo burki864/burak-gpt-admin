@@ -5,19 +5,33 @@ from datetime import datetime
 
 # ---------------- CONFIG ----------------
 st.set_page_config(
-    page_title="Burak GPT Admin",
-    page_icon="📊",
+    page_title="Burak GPT | Admin Panel",
+    page_icon="🛡️",
     layout="wide"
 )
 
-# ---------------- LOGIN ----------------
 ADMIN_EMAIL = "burakerenkisapro1122@gmail.com"
 ADMIN_PASSWORD = "burki4509"
 
-if "auth" not in st.session_state:
-    st.session_state.auth = False
+USERS_FILE = "users.json"
 
-if not st.session_state.auth:
+# ---------------- HELPERS ----------------
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "w") as f:
+            json.dump({}, f)
+    with open(USERS_FILE, "r") as f:
+        return json.load(f)
+
+def save_users(data):
+    with open(USERS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# ---------------- AUTH ----------------
+if "admin_auth" not in st.session_state:
+    st.session_state.admin_auth = False
+
+if not st.session_state.admin_auth:
     st.title("🔐 Admin Girişi")
 
     email = st.text_input("Email")
@@ -25,60 +39,55 @@ if not st.session_state.auth:
 
     if st.button("Giriş Yap"):
         if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-            st.session_state.auth = True
+            st.session_state.admin_auth = True
             st.rerun()
         else:
             st.error("❌ Yetkisiz giriş")
 
     st.stop()
 
-# ---------------- DATA FILE ----------------
-DATA_FILE = "admin_stats.json"
-
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w") as f:
-        json.dump({
-            "total_visits": 0,
-            "image_requests": 0,
-            "chat_requests": 0,
-            "last_visit": None
-        }, f)
-
-def load_data():
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-stats = load_data()
-
 # ---------------- PANEL ----------------
-st.title("📊 Burak GPT Admin Panel")
+st.title("🛡️ Kullanıcı Yönetim Paneli")
 
-col1, col2, col3 = st.columns(3)
+users = load_users()
 
-col1.metric("👥 Toplam Ziyaret", stats["total_visits"])
-col2.metric("🎨 Görsel İstek", stats["image_requests"])
-col3.metric("💬 Sohbet İstek", stats["chat_requests"])
+if not users:
+    st.info("Henüz kullanıcı yok")
+    st.stop()
 
-st.divider()
+st.markdown("---")
 
-st.subheader("🕒 Son Ziyaret")
-st.write(stats["last_visit"] or "Henüz yok")
+for uid, data in users.items():
+    col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
 
-if st.button("🔄 Yenile"):
-    st.rerun()
+    with col1:
+        st.markdown(f"### 👤 {uid}")
+        st.caption(f"Ad: {data.get('name')}")
+        st.caption(f"Oluşturulma: {data.get('created_at')}")
 
-st.divider()
+    with col2:
+        status = "🟢 Aktif" if data["active"] else "⚫ Kapalı"
+        st.markdown(status)
 
-if st.button("🧹 Sayaçları Sıfırla"):
-    stats = {
-        "total_visits": 0,
-        "image_requests": 0,
-        "chat_requests": 0,
-        "last_visit": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_data(stats)
-    st.success("✅ Sıfırlandı")
+    with col3:
+        ban = "🚫 Banned" if data["banned"] else "✅ Temiz"
+        st.markdown(ban)
+
+    with col4:
+        if st.button("👁️ Görüntüle", key=f"view_{uid}"):
+            st.info(json.dumps(data, indent=2, ensure_ascii=False))
+
+    with col5:
+        if st.button("🚫 Banla", key=f"ban_{uid}"):
+            users[uid]["banned"] = True
+            save_users(users)
+            st.warning(f"{uid} banlandı")
+            st.rerun()
+
+        if st.button("❌ Hesabı Kapat", key=f"close_{uid}"):
+            users[uid]["active"] = False
+            save_users(users)
+            st.error(f"{uid} hesabı kapatıldı")
+            st.rerun()
+
+    st.markdown("---")
