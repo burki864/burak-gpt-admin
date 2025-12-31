@@ -1,56 +1,61 @@
 import streamlit as st
 import json, os
 
-st.set_page_config(page_title="Yönetim Paneli", layout="wide")
+st.set_page_config("Admin Panel","🛠️","wide")
 
-ADMINS = ["burakerenkisapro1122@gmail.com", "burak"]
-
-USER_FILE = "users.json"
-
-def load_users():
-    with open(USER_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_users(data):
-    with open(USER_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-# ---------- ADMIN LOGIN ----------
+# ---------- AUTH ----------
 if "admin" not in st.session_state:
-    st.session_state.admin = None
+    st.session_state.admin = False
 
 if not st.session_state.admin:
-    name = st.text_input("Admin kullanıcı adı")
+    st.title("🔐 Admin Girişi")
+    key = st.text_input("Admin Key", type="password")
     if st.button("Giriş"):
-        if name in ADMINS:
-            st.session_state.admin = name
+        if key == st.secrets["ADMIN_KEY"]:
+            st.session_state.admin = True
             st.rerun()
         else:
-            st.error("⛔ Yetkisiz")
+            st.error("❌ Yetkisiz")
     st.stop()
 
-# ---------- PANEL ----------
-st.title("🛠️ Yönetim Paneli")
-data = load_users()
+# ---------- USERS ----------
+def load_users():
+    if not os.path.exists("users.json"):
+        return {}
+    return json.load(open("users.json","r"))
 
-for uid, user in data["users"].items():
-    col1, col2, col3 = st.columns([4,2,2])
+def save_users(u):
+    json.dump(u, open("users.json","w"), indent=2)
 
-    status = "🟢 Aktif"
-    if user.get("banned"):
-        status = "🚫 Banlı"
-    elif not user.get("active"):
-        status = "❌ Kapalı"
+users = load_users()
 
-    col1.write(f"👤 {uid}")
-    col1.caption(status)
+st.title("🛠️ Admin Panel")
 
-    if col2.button("🚫 Ban", key=f"ban_{uid}"):
-        user["banned"] = True
-        save_users(data)
-        st.rerun()
+if not users:
+    st.info("Henüz kullanıcı yok")
+    st.stop()
 
-    if col3.button("❌ Kapat", key=f"close_{uid}"):
-        user["active"] = False
-        save_users(data)
-        st.rerun()
+user = st.selectbox("Kullanıcı", users.keys())
+info = users[user]
+
+st.write("Durum:", info)
+
+c1,c2,c3 = st.columns(3)
+
+if c1.button("🚫 Ban"):
+    info["banned"] = True
+
+if c2.button("✅ Unban"):
+    info["banned"] = False
+
+if c3.button("🧹 Soft Delete"):
+    info["deleted"] = True
+
+if st.button("♻️ Geri Aç"):
+    info["deleted"] = False
+
+save_users(users)
+st.success("✔️ Güncellendi")
+
+if st.button("⬅️ GPT’ye Dön"):
+    st.switch_page("app.py")
