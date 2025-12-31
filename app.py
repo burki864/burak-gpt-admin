@@ -2,13 +2,14 @@ import streamlit as st
 import json, os
 from datetime import datetime, timedelta
 
+# ================= PAGE =================
 st.set_page_config(
     page_title="Admin Panel",
     page_icon="🛠️",
     layout="wide"
 )
 
-# ---------- AUTH ----------
+# ================= AUTH =================
 if "admin" not in st.session_state:
     st.session_state.admin = False
 
@@ -25,39 +26,43 @@ if not st.session_state.admin:
 
     st.stop()
 
-# ---------- USERS IO ----------
+# ================= USERS IO =================
 USERS_FILE = "users.json"
 
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
-    with open(USERS_FILE, "r") as f:
-        return json.load(f)
+    try:
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
 
-def save_users(users):
+def save_users(data):
     with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=2)
+        json.dump(data, f, indent=2)
 
 users = load_users()
 
-# ---------- ONLINE CHECK ----------
+# ================= ONLINE CHECK =================
 def is_online(last_seen):
     if not last_seen:
         return False
     try:
         t = datetime.fromisoformat(last_seen)
-        return datetime.utcnow() - t < timedelta(seconds=60)
+        return datetime.utcnow() - t < timedelta(seconds=90)
     except:
         return False
 
-# ---------- UI ----------
+# ================= UI =================
 st.title("🛠️ Admin Panel")
 
 if not users:
-    st.info("Henüz kullanıcı yok")
+    st.info("Henüz kayıtlı kullanıcı yok")
     st.stop()
 
-st.markdown("## 👥 Kullanıcı Listesi")
+# ---------- USER LIST ----------
+st.markdown("## 👥 Kullanıcılar")
 
 for name, info in users.items():
     online = is_online(info.get("last_seen"))
@@ -73,7 +78,7 @@ st.markdown("---")
 user = st.selectbox("Kullanıcı Seç", list(users.keys()))
 info = users[user]
 
-st.write("### Kullanıcı Bilgisi")
+st.markdown("### Kullanıcı Bilgisi")
 st.json(info)
 
 c1, c2, c3, c4 = st.columns(4)
@@ -81,7 +86,7 @@ c1, c2, c3, c4 = st.columns(4)
 if c1.button("🚫 Banla"):
     users[user]["banned"] = True
     save_users(users)
-    st.success("Banlandı")
+    st.success("Kullanıcı banlandı")
     st.rerun()
 
 if c2.button("✅ Unban"):
@@ -93,7 +98,7 @@ if c2.button("✅ Unban"):
 if c3.button("🧹 Soft Delete"):
     users[user]["deleted"] = True
     save_users(users)
-    st.success("Hesap devre dışı")
+    st.success("Hesap devre dışı bırakıldı")
     st.rerun()
 
 if c4.button("♻️ Geri Aç"):
@@ -105,11 +110,9 @@ if c4.button("♻️ Geri Aç"):
 st.markdown("---")
 
 # ---------- BACK ----------
-MAIN_APP_URL = "https://burak-gpt.streamlit.app"
-
 st.markdown(
-    f"""
-    <a href="{MAIN_APP_URL}" target="_self">
+    """
+    <a href="https://burak-gpt.streamlit.app">
         ⬅️ GPT’ye Dön
     </a>
     """,
