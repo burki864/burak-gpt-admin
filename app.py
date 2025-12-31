@@ -57,5 +57,9 @@ if st.button("♻️ Geri Aç"):
 save_users(users)
 st.success("✔️ Güncellendi")
 
-if st.button("⬅️ GPT’ye Dön"):
-    st.switch_page("app.py")
+st.markdown(
+    "<a href='https://burak-gpt.streamlit.app/' target='_self'>"
+    "<button style='width:100%;padding:10px;border-radius:8px;'>⬅️ GPT’ye Dön</button>"
+    "</a>",
+    unsafe_allow_html=True
+)
